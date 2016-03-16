@@ -18,53 +18,20 @@
 	},
 	"require": {
 		"php": ">=5.4",
-		"nette/di": "~2.3@dev",
-		"nette/caching": "~2.3@dev",
-		"nette/http": "~2.3@dev",
-		"nette/utils": "~2.3@dev"
-	},
-	"suggest": {
-		"ext-redis": "The php redis extension https://github.com/nicolasff/phpredis/ is required for connecting to redis server"
+		"ext-redis": "*"
 	},
 	"require-dev": {
-		"nette/application": "~2.3@dev",
-		"nette/bootstrap": "~2.3@dev",
-		"nette/caching": "~2.3@dev",
-		"nette/component-model": "~2.2@dev",
-		"nette/database": "~2.3@dev",
-		"nette/deprecated": "~2.2@dev",
-		"nette/di": "~2.3@dev",
-		"nette/finder": "~2.3@dev",
-		"nette/forms": "~2.3@dev",
-		"nette/http": "~2.3@dev",
-		"nette/mail": "~2.3@dev",
-		"nette/neon": "~2.3@dev",
-		"nette/php-generator": "~2.3@dev",
-		"nette/reflection": "~2.3@dev",
-		"nette/robot-loader": "~2.3@dev",
-		"nette/safe-stream": "~2.3@dev",
-		"nette/security": "~2.3@dev",
-		"nette/tokenizer": "~2.2@dev",
-		"nette/utils": "~2.3@dev",
-		"latte/latte": "~2.3@dev",
-		"tracy/tracy": "~2.3@dev",
-
-		"nette/tester": "~1.3@rc"
+		"nette/tester": "~1.7"
 	},
 	"autoload": {
-		"psr-0": {
-			"Kdyby\\Redis\\": "src/"
+		"psr-4": {
+			"Kdyby\\RedisActiveLock\\": "src/"
 		},
 		"classmap": [
-			"src/Kdyby/Redis/exceptions.php"
+			"src/exceptions.php"
 		]
 	},
 	"autoload-dev": {
-		"classmap": ["tests/KdybyTests/Redis"]
-	},
-	"extra": {
-		"branch-alias": {
-			"dev-master": "3.3-dev"
-		}
+		"classmap": ["tests/KdybyTests/RedisActiveLock"]
 	}
 }
