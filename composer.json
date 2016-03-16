@@ -1,8 +1,8 @@
 {
-	"name": "kdyby/redis",
+	"name": "kdyby/redis-active-lock",
 	"type": "library",
-	"description": "Redis storage for Nette Framework",
-	"keywords": ["nette", "kdyby", "redis", "client", "cache"],
+	"description": "Redis active advisory lock",
+	"keywords": ["kdyby", "redis", "client", "cache"],
 	"homepage": "http://kdyby.org",
 	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
 	"authors": [
@@ -14,11 +14,12 @@
 	],
 	"support": {
 		"email": "filip@prochazka.su",
-		"issues": "https://github.com/kdyby/redis/issues"
+		"issues": "https://github.com/Kdyby/RedisActiveLock/issues"
 	},
 	"require": {
 		"php": ">=5.4",
-		"ext-redis": "*"
+		"ext-redis": "*",
+		"kdyby/strict-objects": "~1.0"
 	},
 	"require-dev": {
 		"nette/tester": "~1.7"
@@ -32,6 +33,6 @@
 		]
 	},
 	"autoload-dev": {
-		"classmap": ["tests/KdybyTests/RedisActiveLock"]
+		"classmap": ["tests/KdybyTests/"]
 	}
 }

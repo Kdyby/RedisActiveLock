@@ -17,3 +17,8 @@ if (!$loader = include __DIR__ . '/../../vendor/autoload.php') {
 Tester\Environment::setup();
 class_alias('Tester\Assert', 'Assert');
 date_default_timezone_set('Europe/Prague');
+
+function run(\Tester\TestCase $testCase)
+{
+	$testCase->run();
+}
