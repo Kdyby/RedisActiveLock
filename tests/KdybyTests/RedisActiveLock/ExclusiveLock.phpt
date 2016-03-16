@@ -1,20 +1,18 @@
 <?php
 
 /**
- * Test: Kdyby\Redis\ExclusiveLock.
- *
- * @testCase Kdyby\Redis\ExclusiveLockTest
- * @author Filip Procházka <filip@prochazka.su>
- * @package Kdyby\Redis
+ * @testCase
  */
 
-namespace KdybyTests\Redis;
+namespace KdybyTests\RedisActiveLock;
 
-use Kdyby\Redis\ExclusiveLock;
-use Kdyby\Redis\RedisClient;
+use Kdyby\RedisActiveLock\ExclusiveLock;
 use Nette;
+use Nette\Utils\AssertionException;
 use Tester;
 use Tester\Assert;
+
+
 
 require_once __DIR__ . '/../bootstrap.php';
 
@@ -23,14 +21,13 @@ require_once __DIR__ . '/../bootstrap.php';
 /**
  * @author Filip Procházka <filip@prochazka.su>
  */
-class ExclusiveLockTest extends AbstractRedisTestCase
+class ExclusiveLockTest extends Tester\TestCase
 {
 
 	public function testLockExpired()
 	{
-		$client = $this->client;
-		Assert::exception(function () use ($client) {
-			$first = new ExclusiveLock($client);
+		Assert::exception(function () {
+			$first = new ExclusiveLock($this->createClient());
 			$first->duration = 1;
 
 			Assert::true($first->acquireLock('foo:bar'));
@@ -45,9 +42,10 @@ class ExclusiveLockTest extends AbstractRedisTestCase
 
 	public function testDeadlockHandling()
 	{
-		$first = new ExclusiveLock($this->client);
+		$first = new ExclusiveLock($this->createClient());
 		$first->duration = 1;
-		$second = new ExclusiveLock(new RedisClient());
+
+		$second = new ExclusiveLock($this->createClient());
 		$second->duration = 1;
 
 		Assert::true($first->acquireLock('foo:bar'));
@@ -56,6 +54,23 @@ class ExclusiveLockTest extends AbstractRedisTestCase
 		Assert::true($second->acquireLock('foo:bar'));
 	}
 
+
+
+	/**
+	 * @return \Redis
+	 */
+	private function createClient()
+	{
+		$client = new \Redis();
+		if (!$client->connect('127.0.0.1')) {
+			throw new \RuntimeException(sprintf('Connection error: %s', $client->getLastError()));
+		}
+
+		return $client;
+	}
+
 }
 
-\run(new ExclusiveLockTest());
+
+
+(new ExclusiveLockTest())->run();

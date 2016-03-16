@@ -8,7 +8,7 @@
  * For the full copyright and license information, please view the file license.txt that was distributed with this source code.
  */
 
-namespace Kdyby\Redis;
+namespace Kdyby\RedisActiveLock;
 
 use Kdyby;
 use Nette;
@@ -19,18 +19,18 @@ use Nette;
  * @author Ondřej Nešpor
  * @author Filip Procházka <filip@prochazka.su>
  */
-class ExclusiveLock extends Nette\Object
+class ExclusiveLock
 {
 
 	/**
-	 * @var RedisClient
+	 * @var \Redis
 	 */
-	private $client;
+	private $redis;
 
 	/**
 	 * @var array
 	 */
-	private $keys = array();
+	private $keys = [];
 
 	/**
 	 * Duration of the lock, this is time in seconds, how long any other process can't work with the row.
@@ -49,22 +49,9 @@ class ExclusiveLock extends Nette\Object
 
 
 
-	/**
-	 * @param RedisClient $redisClient
-	 */
-	public function __construct(RedisClient $redisClient)
+	public function __construct(\Redis $redis)
 	{
-		$this->client = $redisClient;
-	}
-
-
-
-	/**
-	 * @param RedisClient $client
-	 */
-	public function setClient(RedisClient $client)
-	{
-		$this->client = $client;
+		$this->redis = $redis;
 	}
 
 
@@ -99,7 +86,7 @@ class ExclusiveLock extends Nette\Object
 		do {
 			$sleepTime = 5000;
 			do {
-				if ($this->client->setNX($lockKey, $timeout = $this->calculateTimeout())) {
+				if ($this->redis->setnx($lockKey, $timeout = $this->calculateTimeout())) {
 					$this->keys[$key] = $timeout;
 					return TRUE;
 				}
@@ -108,12 +95,12 @@ class ExclusiveLock extends Nette\Object
 					throw LockException::acquireTimeout();
 				}
 
-				$lockExpiration = $this->client->get($lockKey);
+				$lockExpiration = $this->redis->get($lockKey);
 				$sleepTime += 2500;
 
 			} while (empty($lockExpiration) || ($lockExpiration >= time() && !usleep($sleepTime)));
 
-			$oldExpiration = $this->client->getSet($lockKey, $timeout = $this->calculateTimeout());
+			$oldExpiration = $this->redis->getSet($lockKey, $timeout = $this->calculateTimeout());
 			if ($oldExpiration === $lockExpiration) {
 				$this->keys[$key] = $timeout;
 				return TRUE;
@@ -128,10 +115,11 @@ class ExclusiveLock extends Nette\Object
 
 	/**
 	 * @param string $key
+	 * @return bool
 	 */
 	public function release($key)
 	{
-		if (!isset($this->keys[$key])) {
+		if (!array_key_exists($key, $this->keys)) {
 			return FALSE;
 		}
 
@@ -140,7 +128,7 @@ class ExclusiveLock extends Nette\Object
 			return FALSE;
 		}
 
-		$this->client->del($this->formatLock($key));
+		$this->redis->del($this->formatLock($key));
 		unset($this->keys[$key]);
 		return TRUE;
 	}
@@ -150,10 +138,11 @@ class ExclusiveLock extends Nette\Object
 	/**
 	 * @param string $key
 	 * @throws LockException
+	 * @return bool
 	 */
 	public function increaseLockTimeout($key)
 	{
-		if (!isset($this->keys[$key])) {
+		if (!array_key_exists($key, $this->keys)) {
 			return FALSE;
 		}
 
@@ -161,24 +150,12 @@ class ExclusiveLock extends Nette\Object
 			throw LockException::durabilityTimedOut();
 		}
 
-		$oldTimeout = $this->client->getSet($this->formatLock($key), $timeout = $this->calculateTimeout());
+		$oldTimeout = $this->redis->getSet($this->formatLock($key), $timeout = $this->calculateTimeout());
 		if ((int)$oldTimeout !== (int)$this->keys[$key]) {
 			throw LockException::invalidDuration();
 		}
 		$this->keys[$key] = $timeout;
 		return TRUE;
-	}
-
-
-
-	/**
-	 * Release all acquired locks.
-	 */
-	public function releaseAll()
-	{
-		foreach ((array)$this->keys as $key => $timeout) {
-			$this->release($key);
-		}
 	}
 
 
@@ -196,12 +173,24 @@ class ExclusiveLock extends Nette\Object
 
 
 	/**
+	 * Release all acquired locks.
+	 */
+	public function releaseAll()
+	{
+		foreach ((array)$this->keys as $key => $timeout) {
+			$this->release($key);
+		}
+	}
+
+
+
+	/**
 	 * @param string $key
 	 * @return int
 	 */
 	public function getLockTimeout($key)
 	{
-		if (!isset($this->keys[$key])) {
+		if (!array_key_exists($key, $this->keys)) {
 			return 0;
 		}
 
