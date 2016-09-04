@@ -23,6 +23,7 @@ before_install:
   - composer self-update
 
 install:
+  - tests/travis.phpredis.sh
   - travis_retry composer update --no-interaction --prefer-dist $COMPOSER_EXTRA_ARGS
   - travis_retry composer create-project --no-interaction jakub-onderka/php-parallel-lint /tmp/php-parallel-lint ~0.9
   - travis_retry composer create-project --no-interaction kdyby/code-checker /tmp/code-checker
@@ -30,7 +31,6 @@ install:
   - which redis-server
   - cat /etc/redis/redis.conf
   - tests/travis.redis.sh
-  - tests/travis.phpredis.sh
 
 before_script:
   - redis-cli info |grep version
