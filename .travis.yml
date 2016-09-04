@@ -12,6 +12,14 @@ php:
   - 5.6
   - 7.0
 
+services:
+  - redis-server
+
+addons:
+  apt:
+    packages:
+      - redis-server
+
 matrix:
   include:
     - php: 5.6
@@ -28,11 +36,6 @@ install:
   - travis_retry composer create-project --no-interaction jakub-onderka/php-parallel-lint /tmp/php-parallel-lint ~0.9
   - travis_retry composer create-project --no-interaction kdyby/code-checker /tmp/code-checker
   - travis_retry wget -O /tmp/coveralls.phar https://github.com/satooshi/php-coveralls/releases/download/v1.0.1/coveralls.phar
-  - which redis-server
-  - cat /etc/redis/redis.conf
-  - tests/travis.redis.sh
-
-before_script:
   - redis-cli info |grep version
 
 script:
