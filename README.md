@@ -4,6 +4,7 @@ Kdyby/RedisActiveLock
 [![Build Status](https://travis-ci.org/Kdyby/RedisActiveLock.svg?branch=master)](https://travis-ci.org/Kdyby/RedisActiveLock)
 [![Downloads this Month](https://img.shields.io/packagist/dm/kdyby/redis-active-lock.svg)](https://packagist.org/packages/kdyby/redis-active-lock)
 [![Latest stable](https://img.shields.io/packagist/v/kdyby/redis-active-lock.svg)](https://packagist.org/packages/kdyby/redis-active-lock)
+[![Coverage Status](https://coveralls.io/repos/github/Kdyby/RedisActiveLock/badge.svg?branch=master)](https://coveralls.io/github/Kdyby/RedisActiveLock?branch=master)
 [![Join the chat at https://gitter.im/Kdyby/Help](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/Kdyby/Help)
 
 
