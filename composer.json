@@ -1,7 +1,7 @@
 {
 	"name": "kdyby/redis-active-lock",
 	"type": "library",
-	"description": "Redis active advisory lock",
+	"description": "Redis redlock - active advisory locking mechanism",
 	"keywords": ["kdyby", "redis", "redlock", "lock", "advisory"],
 	"homepage": "http://kdyby.org",
 	"license": ["BSD-3-Clause", "GPL-2.0", "GPL-3.0"],
