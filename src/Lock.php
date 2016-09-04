@@ -23,8 +23,8 @@ interface Lock
 	/**
 	 * Tries to acquire a key lock, otherwise waits until it's released and repeats.
 	 *
-	 * @param int $duration
-	 * @param int $acquireTimeout
+	 * @param int $duration in seconds
+	 * @param int $acquireTimeout in seconds
 	 * @throws AcquireTimeoutException
 	 * @return bool
 	 */
