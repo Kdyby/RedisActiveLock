@@ -47,6 +47,8 @@ class AdvisoryLockTest extends Tester\TestCase
 		sleep(3); // first died?
 
 		Assert::true($second->lock(1));
+		Assert::true($second->release());
+		Assert::false($first->release());
 	}
 
 

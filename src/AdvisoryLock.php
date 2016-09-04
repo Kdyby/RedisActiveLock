@@ -126,7 +126,14 @@ class AdvisoryLock implements Lock
 			return FALSE;
 		}
 
-		$this->redis->del($this->formatLock($this->key));
+		$script = <<<LUA
+			if redis.call("GET", KEYS[1]) == ARGV[1] then
+				return redis.call("DEL", KEYS[1])
+			else
+				return 0
+			end
+LUA;
+		$this->redis->eval($script, [$this->key, $this->lockTimeout], 1);
 		$this->lockTimeout = NULL;
 		return TRUE;
 	}
