@@ -6,6 +6,7 @@
 
 namespace KdybyTests\RedisActiveLock;
 
+use Kdyby\RedisActiveLock\AcquireTimeoutException;
 use Kdyby\RedisActiveLock\AdvisoryLock;
 use Redis;
 use Tester;
@@ -23,83 +24,123 @@ require_once __DIR__ . '/bootstrap.php';
 class AdvisoryLockTest extends Tester\TestCase
 {
 
-	public function testIncreaseDuration()
+	public function testHoldsLock()
 	{
-		$lock = new AdvisoryLock('foo:bar', $this->createClient());
+		$client = $this->createClient();
+		$first = new AdvisoryLock('foo:bar', [$client]);
+		$second = new AdvisoryLock('foo:bar', [$client], null);
 
-		$lock->lock(2);
-		$remainingTimeout = $lock->calculateRemainingTimeout();
-		Assert::true($remainingTimeout >= 1 && $remainingTimeout <= 3);
+		$startTime = microtime(TRUE);
+		$first->lock(3000);
+		$second->lock(1000);
+		Assert::true((microtime(TRUE) - $startTime) >= 3);
 
-		$lock->increaseDuration(5);
-		$remainingTimeout = $lock->calculateRemainingTimeout();
-		Assert::true($remainingTimeout >= 4 && $remainingTimeout <= 6);
-
-		$lock->release();
+		Assert::true($first->release());
+		Assert::true($second->release());
 	}
 
 
-
-	public function testIncreaseDurationLockExpiredException()
+	public function testAcquireExpiredLock()
 	{
-		$first = new AdvisoryLock('foo:bar', $this->createClient());
-		$first->lock(1);
-		sleep(3);
+		$client = $this->createClient();
+		$first = new AdvisoryLock('foo:bar', [$client]);
+		$second = new AdvisoryLock('foo:bar', [$client]);
 
-		Assert::exception(function () use ($first) {
-			$first->increaseDuration();
-		}, 'Kdyby\RedisActiveLock\LockException', 'Process ran too long. Increase lock duration, or extend lock regularly.');
-	}
-
-
-
-	public function testDeadlockHandling()
-	{
-		$first = new AdvisoryLock('foo:bar', $this->createClient());
-		$second = new AdvisoryLock('foo:bar', $this->createClient());
-
-		$first->lock(1);
+		$first->lock(100);
 		sleep(3); // first died?
 
-		$second->lock(1);
+		$second->lock(100);
 		Assert::true($second->release());
-		Assert::false($first->release());
+		Assert::true($first->release());
 	}
 
 
-
-	public function testInvalidDurationException()
+	public function testLockingLockedKeyAcquireTimeoutException()
 	{
-		$lock = new AdvisoryLock('foo:bar', $this->createClient());
+		$client = $this->createClient();
+		$first = new AdvisoryLock('foo:bar', [$client]);
+		$second = new AdvisoryLock('foo:bar', [$client], 3);
 
-		Assert::exception(function () use ($lock) {
-			$lock->lock(-1);
-		}, 'Kdyby\RedisActiveLock\InvalidArgumentException');
-
-		Assert::exception(function () use ($lock) {
-			$lock->increaseDuration(-1);
-		}, 'Kdyby\RedisActiveLock\InvalidArgumentException');
+		$first->lock(10000);
+		Assert::exception(function () use ($second) {
+			$second->lock(5000);
+		}, 'Kdyby\RedisActiveLock\AcquireTimeoutException', null, AcquireTimeoutException::ACQUIRE_TIMEOUT);
+		Assert::false($second->release());
+		Assert::true($first->release());
 	}
 
 
-
-	public function testIncreaseNotLockedKeyException()
+	public function testLockingLockedKeyAllAttemptsUsedException()
 	{
-		$lock = new AdvisoryLock('foo:bar', $this->createClient());
+		$client = $this->createClient();
+		$first = new AdvisoryLock('foo:bar', [$client]);
+		$second = new AdvisoryLock('foo:bar', [$client], null, 1);
 
-		Assert::exception(function () use ($lock) {
-			$lock->increaseDuration(1);
-		}, 'Kdyby\RedisActiveLock\LockException', 'The key "foo:bar" has not yet been locked');
+		$first->lock(10000);
+		Assert::exception(function () use ($second) {
+			$second->lock(5000);
+		}, 'Kdyby\RedisActiveLock\AcquireTimeoutException', null, AcquireTimeoutException::ALL_ATTEMPTS_USED);
+		Assert::false($second->release());
+		Assert::true($first->release());
 	}
-
 
 
 	public function testReleaseNotLocked()
 	{
-		$lock = new AdvisoryLock('foo:bar', $this->createClient());
+		$lock = new AdvisoryLock('foo:bar', [$this->createClient()]);
 		Assert::false($lock->release());
 	}
 
+
+
+	public function testInvalidConstructorArguments()
+	{
+		Assert::exception(function () {
+			new AdvisoryLock('key', [
+				$this->createClient(),
+				new \stdClass,
+			]);
+		}, 'Kdyby\RedisActiveLock\InvalidArgumentException', 'Given connections must be array of connected \\Redis instances');
+
+		Assert::exception(function () {
+			new AdvisoryLock('key', []);
+		}, 'Kdyby\RedisActiveLock\InvalidArgumentException', 'At leasts one server is required');
+
+		Assert::exception(function () {
+			new AdvisoryLock(1, [$this->createClient()]);
+		}, 'Kdyby\RedisActiveLock\InvalidArgumentException', 'Given key is not a string');
+
+		Assert::exception(function () {
+			new AdvisoryLock('key', [$this->createClient()], NULL, -1);
+		}, 'Kdyby\RedisActiveLock\InvalidArgumentException', 'Max attempts must be a positive whole number');
+
+		Assert::exception(function () {
+			new AdvisoryLock('key', [$this->createClient()], -1);
+		}, 'Kdyby\RedisActiveLock\InvalidArgumentException', 'Acquire timeout must be a positive whole number of seconds');
+	}
+
+
+
+	public function testLockWithInvalidTtl()
+	{
+		$lock = new AdvisoryLock('key', [$this->createClient()]);
+
+		Assert::exception(function () use ($lock) {
+			$lock->lock(-1);
+		}, 'Kdyby\RedisActiveLock\InvalidArgumentException', 'Time to live must a positive whole number');
+	}
+
+
+
+	public function testLockRepeatedly()
+	{
+		$lock = new AdvisoryLock('key', [$this->createClient()]);
+		$lock->lock(1000);
+
+		Assert::exception(function () use ($lock) {
+			$lock->lock(1000);
+		}, 'Kdyby\RedisActiveLock\LockException', 'The key "key" is already locked');
+	}
 
 
 	/**
